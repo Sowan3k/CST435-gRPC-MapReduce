@@ -1,0 +1,38 @@
+services:
+  worker1:
+    build: .
+    environment:
+      - PORT=50051
+    ports:
+      - "50051:50051"
+    container_name: grpc_worker1
+
+  worker2:
+    build: .
+    environment:
+      - PORT=50052
+    ports:
+      - "50052:50052"
+    container_name: grpc_worker2
+
+  worker3:
+    build: .
+    environment:
+      - PORT=50053
+    ports:
+      - "50053:50053"
+    container_name: grpc_worker3
+
+  # Optional: run the coordinator in a container (you can skip this and run on host)
+  coordinator:
+    build: .
+    entrypoint: ["python", "coordinator.py"]
+    command: ["--input", "data/input.txt",
+              "--output", "data/output_malay.txt",
+              "--concurrency", "3",
+              "--workers", "worker1:50051,worker2:50052,worker3:50053"]
+    depends_on:
+      - worker1
+      - worker2
+      - worker3
+    container_name: grpc_coordinator

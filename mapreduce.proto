@@ -1,0 +1,21 @@
+syntax = "proto3";
+package mapreduce;
+
+service Worker {
+  rpc Map (MapRequest) returns (MapReply);
+}
+
+message MapRequest {
+  string chunk_id = 1;
+  string text = 2;
+}
+
+message WordCount {
+  string word = 1;
+  int64 count = 2;
+}
+
+message MapReply {
+  string chunk_id = 1;
+  repeated WordCount counts = 2;
+}
