@@ -1,24 +1,23 @@
-# Worker container for gRPC translator
+# Image for the gRPC translator worker and the coordinator
 FROM python:3.12-slim
 
-# Setup work dir
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
 WORKDIR /app
 
-# System deps (optional but good practice)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy dependency list and install
+# Install dependencies first so this layer is cached between code changes
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy app code (proto + generated files + worker + coordinator + data)
-COPY mapreduce.proto mapreduce.proto
-COPY mapreduce_pb2.py mapreduce_pb2.py
-COPY mapreduce_pb2_grpc.py mapreduce_pb2_grpc.py
-COPY worker.py worker.py
-COPY coordinator.py coordinator.py
-COPY data ./data
+# App code: generated stubs, worker, coordinator, health check script.
+# data/ is not baked in; Compose mounts it into the coordinator.
+COPY mapreduce_pb2.py mapreduce_pb2_grpc.py worker.py coordinator.py healthcheck.py ./
+
+# Run as a non-root user. UID 1000 matches the usual first Linux user, so the
+# coordinator can write to the mounted ./data directory.
+RUN useradd --create-home --uid 1000 app
+USER app
 
 # Default port (can be overridden via env)
 ENV PORT=50051
