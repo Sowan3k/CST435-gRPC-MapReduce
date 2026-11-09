@@ -1,38 +1,61 @@
+x-worker: &worker
+  build: .
+  environment: &worker-env
+    TRANSLATOR: ${TRANSLATOR:-google}
+    MOCK_DELAY_SECONDS: ${MOCK_DELAY_SECONDS:-0}
+  healthcheck:
+    test: ["CMD", "python", "healthcheck.py"]
+    interval: 2s
+    timeout: 3s
+    retries: 15
+    start_period: 3s
+  stop_grace_period: 10s
+
 services:
   worker1:
-    build: .
+    <<: *worker
     environment:
-      - PORT=50051
+      <<: *worker-env
+      PORT: "50051"
     ports:
       - "50051:50051"
     container_name: grpc_worker1
 
   worker2:
-    build: .
+    <<: *worker
     environment:
-      - PORT=50052
+      <<: *worker-env
+      PORT: "50052"
     ports:
       - "50052:50052"
     container_name: grpc_worker2
 
   worker3:
-    build: .
+    <<: *worker
     environment:
-      - PORT=50053
+      <<: *worker-env
+      PORT: "50053"
     ports:
       - "50053:50053"
     container_name: grpc_worker3
 
-  # Optional: run the coordinator in a container (you can skip this and run on host)
+  # Runs once, writes data/output_malay.txt on the host, then exits.
   coordinator:
     build: .
     entrypoint: ["python", "coordinator.py"]
     command: ["--input", "data/input.txt",
               "--output", "data/output_malay.txt",
-              "--concurrency", "3",
               "--workers", "worker1:50051,worker2:50052,worker3:50053"]
+    # Set LOCAL_UID and LOCAL_GID if your host user is not UID 1000.
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    volumes:
+      - ./data:/app/data
     depends_on:
-      - worker1
-      - worker2
-      - worker3
+      worker1:
+        condition: service_healthy
+      worker2:
+        condition: service_healthy
+      worker3:
+        condition: service_healthy
+    restart: "no"
     container_name: grpc_coordinator
