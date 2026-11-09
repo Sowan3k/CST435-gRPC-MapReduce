@@ -1,3 +1,4 @@
 grpcio==1.76.0
+grpcio-health-checking==1.76.0
 protobuf==6.33.0
 googletrans==4.0.0-rc1
